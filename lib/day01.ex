@@ -29,6 +29,7 @@ defmodule Day01 do
       {:ok, content} ->
         String.split(content)
         |> Enum.map(fn x -> Integer.parse(x) end)
+        |> Enum.map(fn {n, _} -> n end)
         |> countWindowIncreases()
         |> IO.puts()
 
