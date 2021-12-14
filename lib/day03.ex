@@ -25,7 +25,7 @@ defmodule Day03 do
 
   @spec bits_to_integer([integer()]) :: integer()
   defp bits_to_integer(bs) do
-    Enum.reduce(bs, fn b, acc -> (acc * 2) + b end)
+    Enum.reduce(bs, fn b, acc -> acc * 2 + b end)
   end
 
   @spec calc_values([integer()]) :: {integer(), integer()}
@@ -42,8 +42,11 @@ defmodule Day03 do
   @spec main :: :ok | [integer]
   def main do
     case File.read("res/day03.dat") do
-      {:error, reason} -> IO.puts(:stderr, "Failed to read: #{reason}")
-      {:ok, content} -> String.split(content) |> Enum.map(&parse/1) |> calc_values() |> calc_result() |> IO.puts()
+      {:error, reason} ->
+        IO.puts(:stderr, "Failed to read: #{reason}")
+
+      {:ok, content} ->
+        String.split(content) |> Enum.map(&parse/1) |> calc_values() |> calc_result() |> IO.puts()
     end
   end
 end
