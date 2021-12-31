@@ -1,83 +1,124 @@
-defmodule Day03 do
-  @spec parse(String.t()) :: [integer()]
-  defp parse(str) do
+defmodule Day03.Part1 do
+  @moduledoc "Solution to day 3 part 1"
+
+  @doc ~S"""
+  Convert a string of a binary number to a list of its bits.
+
+  ## Examples
+
+      iex> Day03.Part1.chars_to_ints("10101")
+      [1, 0, 1, 0, 1]
+
+  """
+  @spec chars_to_ints(String.t()) :: [integer()]
+  def chars_to_ints(str) do
     String.graphemes(str) |> Enum.map(&String.to_integer/1)
   end
 
+  @doc ~S"""
+  Add two lists of integers element-wise. If the lists are of different
+  lengths, the result has the same length as the shortest input.
+
+  ## Examples
+
+      iex> Day03.Part1.add_lists([1,0,1,1], [0,1,1,1])
+      [1,1,2,2]
+
+      iex> Day03.Part1.add_lists([1,0], [1,1,0])
+      [2,1]
+
+      iex> Day03.Part1.add_lists([0,1,1], [1,1])
+      [1,2]
+
+  """
   @spec add_lists([integer()], [integer()]) :: [integer()]
-  defp add_lists([x | xs], [y | ys]) do
+  def add_lists([x | xs], [y | ys]) do
     [x + y | add_lists(xs, ys)]
   end
 
-  defp add_lists([], _), do: []
-  defp add_lists(_, []), do: []
+  def add_lists([], _ys), do: []
+  def add_lists(_xs, []), do: []
 
-  @spec gamma([integer()]) :: [integer()]
-  defp gamma(xs) do
-    n = Enum.count(xs) / 2
-    Enum.reduce(xs, &add_lists/2) |> Enum.map(fn x -> if x >= n, do: 1, else: 0 end)
+  @doc ~S"""
+  Infer the gamma value based on the given list of bit counts.
+
+  ## Examples
+
+      iex> Day03.Part1.gamma([7,4,1,0,3], 3)
+      [1,1,0,0,1]
+
+  """
+  @spec gamma([integer()], integer()) :: [integer()]
+  def gamma(bit_counts, threshold) do
+    Enum.map(bit_counts, fn c -> if c >= threshold, do: 1, else: 0 end)
   end
 
-  @spec epsilon_from_gamma([integer()]) :: [integer()]
-  defp epsilon_from_gamma(bs) do
-    Enum.map(bs, fn b -> if b == 1, do: 0, else: 1 end)
+  @spec epsilon_from_gamma([integer()]) :: {[integer()], [integer()]}
+  defp epsilon_from_gamma(gamma) do
+    {gamma, Enum.map(gamma, fn b -> rem(b + 1, 2) end)}
   end
 
-  @spec bits_to_integer([integer()]) :: integer()
-  defp bits_to_integer(bs) do
-    Enum.reduce(bs, fn b, acc -> acc * 2 + b end)
+  @doc ~S"""
+  Convert a list of bits to its equivalent unsigned integer.
+
+  ## Examples
+
+      iex> Day03.Part1.bits_to_int([1,0,1,1])
+      11
+
+      iex> Day03.Part1.bits_to_int([0,0,0,0])
+      0
+
+      iex> Day03.Part1.bits_to_int([1,1,1,1])
+      15
+  """
+  @spec bits_to_int([integer()]) :: integer()
+  def bits_to_int(bs) do
+    Enum.reduce(bs, fn b, sum -> sum * 2 + b end)
   end
 
-  @spec calc_values([integer()]) :: {integer(), integer()}
-  defp calc_values(xs) do
-    gamma_bits = gamma(xs)
-    epsilon_bits = epsilon_from_gamma(gamma_bits)
-    {bits_to_integer(gamma_bits), bits_to_integer(epsilon_bits)}
+  @spec calc_answer({[integer()], [integer()]}) :: integer()
+  defp calc_answer({gamma, epsilon}) do
+    bits_to_int(gamma) * bits_to_int(epsilon)
   end
 
-  defp calc_result({gamma, epsilon}) do
-    gamma * epsilon
+  @spec solve([String.t()]) :: integer()
+  defp solve(vals) do
+    n = div(Enum.count(vals), 2)
+
+    Enum.map(vals, &chars_to_ints/1)
+    |> Enum.reduce(&add_lists/2)
+    |> gamma(n)
+    |> epsilon_from_gamma()
+    |> calc_answer()
   end
 
-  @spec bit_filter([integer()], integer(), integer()) :: boolean()
-  defp bit_filter([b | _], mask, 0) do
-    b == mask
-  end
+  @spec main() :: :ok
+  def main() do
+    case File.read("res/day03.dat") do
+      {:error, reason} ->
+        IO.puts(:stderr, "Failed to read: #{reason}")
 
-  defp bit_filter([_ | bs], mask, idx) do
-    bit_filter(bs, mask, idx - 1)
+      {:ok, content} ->
+        String.split(content) |> solve() |> IO.puts()
+    end
   end
+end
 
-  @spec get_rating([[integer()]], [integer()], integer()) :: integer()
-  defp get_rating([x], _, _) do
-    bits_to_integer(x)
-  end
+defmodule Day03.Part2 do
+  @moduledoc "Solution to day 3 part 2."
 
-  defp get_rating(values, [m | mask], idx) do
-    new_values = Enum.filter(values, fn val -> bit_filter(val, m, idx) end)
-    get_rating(new_values, mask, idx + 1)
-  end
+  alias Day03.Part1
 
-  @spec find_ratings([[integer()]]) :: {integer(), integer()}
-  defp find_ratings(values) do
-    o2_filter = gamma(values)
-    o2_rating = get_rating(values, o2_filter, 0)
-    co2_filter = epsilon_from_gamma(o2_filter)
-    co2_rating = get_rating(values, co2_filter, 0)
-    {o2_rating, co2_rating}
-  end
-
-  @spec main :: :ok
-  def main do
+  @spec main() :: :ok
+  def main() do
     case File.read("res/day03.dat") do
       {:error, reason} ->
         IO.puts(:stderr, "Failed to read: #{reason}")
 
       {:ok, content} ->
         String.split(content)
-        |> Enum.map(&parse/1)
-        |> find_ratings()
-        |> calc_result()
+        |> Enum.map(&Part1.chars_to_ints/1)
         |> IO.puts()
     end
   end
