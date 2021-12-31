@@ -112,26 +112,44 @@ defmodule Day03.Part2 do
     Enum.reduce(vals, &Part1.add_lists/2) |> Part1.gamma(n) |> Part1.epsilon_from_gamma()
   end
 
-  @spec mask_matches([integer()], [integer()], integer()) :: boolean()
-  defp mask_matches(val, masks, idx) do
-    Enum.at(val, idx) == Enum.at(masks, idx)
+  @spec pair_mask([[integer()]], [integer()]) :: [{[integer()], [boolean()]}]
+  defp pair_mask(vals, mask) do
+    Enum.map(vals, fn val -> {val, mask} end)
+    |> Enum.map(fn {val, mask} -> Enum.zip(val, mask) end)
+    |> Enum.map(fn pairs -> Enum.map(pairs, fn {x, m} -> {x, x == m} end) end)
   end
 
-  @spec apply_mask([[integer()]], [integer()]) :: [integer()]
-  defp apply_mask([val | []], _mask) do
-    val
+  @spec test_filter([{integer(), boolean()}], integer()) :: boolean()
+  defp test_filter(vals, idx) do
+    snd = fn {_x, y} -> y end
+    Enum.at(vals, idx) |> snd.()
   end
 
-  defp apply_mask(vals, mask) do
+  @spec run_filter([[{integer(), boolean()}]], integer()) :: [[{integer(), boolean()}]]
+  defp run_filter(vals, idx) do
+    Enum.filter(vals, fn val -> test_filter(val, idx) end)
+  end
+
+  @spec run_all_filters([[{integer(), boolean()}]], integer(), integer()) :: [
+          [{integer(), boolean()}]
+        ]
+  defp run_all_filters([val | []], _limit, _idx), do: [val]
+  defp run_all_filters(vals, limit, idx) when idx >= limit, do: vals
+
+  defp run_all_filters(vals, limit, idx) when idx < limit do
+    new_vals = run_filter(vals, idx)
+    run_all_filters(new_vals, limit, idx + 1)
   end
 
   @spec solve([String.t()]) :: integer()
   defp solve(vals) do
     inputs = Enum.map(vals, &Part1.chars_to_ints/1)
     {oxygen_mask, co2_mask} = bit_masks(inputs)
-    oxygen = apply_mask(inputs, oxygen_mask)
-    co2 = apply_mask(inputs, co2_mask)
-    Part1.calc_answer({oxygen, co2})
+    [oxygen | _] = pair_mask(inputs, oxygen_mask) |> run_all_filters(Enum.count(oxygen_mask), 0)
+    [co2 | _] = pair_mask(inputs, co2_mask) |> run_all_filters(Enum.count(co2_mask), 0)
+
+    remove_filter = fn {x, _m} -> x end
+    Part1.calc_answer({Enum.map(oxygen, remove_filter), Enum.map(co2, remove_filter)})
   end
 
   @spec main() :: :ok
